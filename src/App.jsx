@@ -7,7 +7,8 @@ import Upgrade from './components/Upgrade/Upgrade';
 import Memory from './components/Memory/memory';
 import Login from './components/AuthForms/login';
 import Signup from "./components/AuthForms/Signup";
-import Profile from "./components/Profile/Profile"
+// Change it to match the file name 'Profile.jsx'
+import Profile from './components/Profile/Profile';
 function Layout() {
   const [expanded, setExpanded] = useState(false);
 
