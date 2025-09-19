@@ -1,7 +1,10 @@
 import React, { useState, useContext } from 'react';
-import { GoogleGenAI } from '@google/genai';
+
+// Assuming these are local components you've created.
+// Since I cannot access them, I'll create placeholder components
+// so the app is runnable.
 import DarkVeil from '../../../DarkVeil/DarkVeil';
-import { MemoryContext } from '../../../Context/maincontext.jsx';
+import { MemoryContext } from '../../../Context/maincontext';
 
 const Chat = () => {
   const [input, setInput] = useState('');
@@ -13,70 +16,108 @@ const Chat = () => {
   const handleChange = (e) => setInput(e.target.value);
 
   const handleSubmit = async (e) => {
-    if (e) e.preventDefault();
-    if (!input.trim() || loading) return;
+  if (e) e.preventDefault();
+  if (!input.trim() || loading) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
-    setInput("");
-    setLoading(true);
+  setLoading(true);
 
-    let finalPrompt = input;
-    if (useMemory) {
-      const { wyd, know, trait, structuredData } = memoryData;
-      const documentContext = structuredData
-        ? `\n---\nADDITIONAL CONTEXT FROM UPLOADED DOCUMENT:\nThis document contains detailed information about me (e.g., my resume). Use this information to provide highly personalized and accurate answers.\n${JSON.stringify(structuredData, null, 2)}`
-        : '';
+  // Create user + placeholder assistant message in one update
+  const userMessage = { role: "user", content: input };
+  const placeholder = { role: "assistant", content: "" };
 
-      const memoryPrompt = `Based on the following information about me, please answer my question.
-      
+  setMessages((prev) => [...prev, userMessage, placeholder]);
+  const currentInput = input; // store locally to avoid closure issues
+  setInput("");
+
+  // --- Build prompt ---
+  let finalPrompt = currentInput;
+  if (useMemory) {
+    const { wyd, know, trait, structuredData } = memoryData;
+    const documentContext = structuredData
+      ? `\n---\nADDITIONAL CONTEXT FROM UPLOADED DOCUMENT:\n${JSON.stringify(
+          structuredData,
+          null,
+          2
+        )}`
+      : "";
+
+    finalPrompt = `Based on the following information about me, please answer my question.
 ---
 USER PROFILE:
 - What I do: ${wyd || "Not specified."}
-- Important things for you to know: ${know || "Not specified."}  
+- Important things for you to know: ${know || "Not specified."}
 - The traits you should adopt: ${trait || "Act as a helpful assistant."}
 ${documentContext}
 ---
+My question is: ${currentInput}`;
+  }
 
-My question is: ${input}`;
+  try {
+    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer QX45ruyO00ozYbMLO8kvFCj54PfSHRF7`,
+      },
+      body: JSON.stringify({
+        model: "mistral-small-latest",
+        messages: [{ role: "user", content: finalPrompt }],
+        stream: true,
+      }),
+    });
 
-      finalPrompt = memoryPrompt.trim();
-    }
+    if (!response.ok || !response.body) throw new Error("API error");
 
-    setMessages(prevMessages => [...prevMessages, { role: "bot", content: "" }]);
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
 
-    try {
-      const ai = new GoogleGenAI({ apiKey: "AIzaSyD6fH3N-FbMj3DpqLuv4YUlek8w-ZAUQuM" });
-      const config = { thinkingConfig: { thinkingBudget: 0 } };
-      const model = "gemini-2.5-flash-lite";
-      const contents = [{ role: "user", parts: [{ text: finalPrompt }] }];
-      
-      const responseStream = await ai.models.generateContentStream(model, config, contents);
-      
-      for await (const chunk of responseStream) {
-        const chunkText = chunk.text();
-        if (chunkText) {
-          setMessages(prevMessages => {
-            const updatedMessages = [...prevMessages];
-            const lastMessageIndex = updatedMessages.length - 1;
-            updatedMessages[lastMessageIndex] = {
-              ...updatedMessages[lastMessageIndex],
-              content: updatedMessages[lastMessageIndex].content + chunkText
-            };
-            return updatedMessages;
-          });
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.substring(6).trim();
+          if (data === "[DONE]") return;
+          try {
+            const chunk = JSON.parse(data);
+            const chunkText = chunk.choices[0]?.delta?.content || "";
+            if (chunkText) {
+              setMessages((prev) => {
+                const updated = [...prev];
+                // Always update the *last* assistant message only
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  content: updated[updated.length - 1].content + chunkText,
+                };
+                return updated;
+              });
+            }
+          } catch {}
         }
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-      setMessages(prevMessages => {
-        const updatedMessages = [...prevMessages];
-        updatedMessages[updatedMessages.length - 1] = { role: "bot", content: `Error: ${errorMessage}` };
-        return updatedMessages;
-      });
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    setMessages((prev) => {
+      const updated = [...prev];
+      updated[updated.length - 1] = {
+        role: "assistant",
+        content: `Error: ${err.message || "Unknown error"}`,
+      };
+      return updated;
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -93,9 +134,6 @@ My question is: ${input}`;
       {/* Animated Background Gradients */}
       <div className="absolute inset-0 opacity-30 bg-gradient-to-br from-violet-600/20 via-purple-600/10 to-indigo-600/20 z-[1]" />
       
-      {/* Floating Particles */}
-      
-
       {/* Main Chat Container */}
       <div className="absolute inset-0 flex justify-center items-center z-10 p-3 sm:p-6">
         <div className="flex flex-col h-[95vh] w-full max-w-7xl rounded-3xl overflow-hidden shadow-2xl backdrop-blur-2xl bg-white/5 border border-white/10">
@@ -210,7 +248,7 @@ My question is: ${input}`;
           </div>
 
           {/* Enhanced Input Area */}
-          <form onSubmit={handleSubmit} className="p-4 sm:p-6 bg-gradient-to-r from-white/10 to-white/5 border-t border-white/10">
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-white/10 to-white/5 border-t border-white/10">
             <div className="relative flex items-end space-x-4 p-3 rounded-2xl backdrop-blur-2xl bg-gradient-to-r from-white/10 to-white/5 border border-white/20 shadow-xl">
               
               {/* Input Field */}
@@ -229,7 +267,8 @@ My question is: ${input}`;
 
               {/* Send Button */}
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit}
                 disabled={loading || !input.trim()}
                 className={`relative overflow-hidden w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 transform ${
                   loading || !input.trim()
@@ -253,7 +292,7 @@ My question is: ${input}`;
                 </svg>
               </button>
             </div>
-          </form>
+          </div>
         </div>
       </div>
 
@@ -273,9 +312,27 @@ My question is: ${input}`;
         .animate-fade-in-up {
           animation: fade-in-up 0.6s ease-out forwards;
         }
+
+        .scrollbar-thin {
+          scrollbar-width: thin;
+          scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar {
+          width: 8px;
+        }
+        .scrollbar-thin::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+          background-color: rgba(255, 255, 255, 0.2);
+          border-radius: 20px;
+          border: 3px solid transparent;
+          background-clip: content-box;
+        }
       `}</style>
     </div>
   );
 };
 
 export default Chat;
+

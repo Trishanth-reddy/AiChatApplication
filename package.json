@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^1.17.0",
+    "@google/generative-ai": "^0.24.1",
     "@gsap/react": "^2.1.2",
     "@mistralai/mistralai": "^1.10.0",
     "@react-three/fiber": "^9.3.0",
