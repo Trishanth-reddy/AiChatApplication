@@ -1,14 +1,19 @@
 import { Routes, Route, Outlet } from 'react-router-dom';
-import Sidebar from '../src/components/ui/Sidebar';
+import { useState } from 'react';
+
+// UI and Layout Components
+import Sidebar from './components/ui/Sidebar';
+
+// Page Components (Corrected Paths)
 import Chat from './components/Home/Chat/Chat';
 import History from './components/History/History';
-import { useState } from 'react';
 import Upgrade from './components/Upgrade/Upgrade';
-import Memory from './components/Memory/memory';
-import Login from './components/AuthForms/login';
+import Memory from './components/Memory/Memory';      // Fixed case
+import Login from './components/AuthForms/Login';        // Fixed case
 import Signup from "./components/AuthForms/Signup";
-// Change it to match the file name 'Profile.jsx'
-import Profile from './components/Profile/Profile';
+import Profile from './components/Profile/Profile';      // Fixed case
+
+// Main layout component with sidebar
 function Layout() {
   const [expanded, setExpanded] = useState(false);
 
@@ -24,6 +29,7 @@ function Layout() {
   );
 }
 
+// Main application component with all routes
 function App() {
   return (
     <Routes>
@@ -38,7 +44,6 @@ function App() {
         <Route path="memory" element={<Memory />} />
         <Route path="upgrade" element={<Upgrade />} />
         <Route path="profile" element={<Profile />} />
-        {/* Add more routes here */}
       </Route>
     </Routes>
   );
