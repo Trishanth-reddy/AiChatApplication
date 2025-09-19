@@ -40,7 +40,7 @@ const Sidebar = ({ expanded, setExpanded }) => {
       id: 6,
       icon: LogOut,
       label: 'Logout',
-      href: '/logout',
+      href: '/login',
     },
   ];
 
