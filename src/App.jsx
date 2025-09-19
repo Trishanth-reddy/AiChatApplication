@@ -4,9 +4,9 @@ import Chat from './components/Home/Chat/Chat';
 import History from './components/History/History';
 import { useState } from 'react';
 import Upgrade from './components/Upgrade/Upgrade';
-import Profile from './components/Profile/profile';
+import Profile from './components/Profile/Profile';
 import Memory from './components/Memory/memory';
-import Login from './components/AuthForms/Login';
+import Login from './components/AuthForms/login';
 import Signup from "./components/AuthForms/Signup";
 
 function Layout() {
